@@ -63,7 +63,7 @@ ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz666', pro
 
 ### To Execute Atlas Org Checks With Results Persisted To A Database
 
-Note: Replace the values for the `-l`, `-p`, `-o` and `-u` parameters with your API public key, your API private key, the ID of your Atlas organisation to inspect, and the URL of the MongoDB database to write the results to, respectively.
+Note: Replace the values for the `-k`, `-p`, `-o` and `-u` parameters with your API public key, your API private key, the ID of your Atlas organisation to inspect, and the URL of the MongoDB database to write the results to, respectively.
 
 ```
 ./atlas-org-config-checker.py -k "dttwone" -p "8e721-ed32-38d-380-33847" -o "bb73cf83ab233329" -u "mongodb+srv://usr:pwd@myclstr.a12z.mongodb.net/"
