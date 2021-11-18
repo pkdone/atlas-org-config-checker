@@ -44,7 +44,7 @@ ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz666', pro
 ## Prerequisites For Running
 
 * You have access to a generated _Organization API Key_ for the organisation you need the utility to inspect
-* This API key has an access list defined which allows access from the IP address of the machine that will run this utility
+* The API key has an access list defined which allows access from the IP address of the machine that will run this utility
 * The API key has the following permissions associated with it: _Organization Read Only_, _Organization Member_, _Organization Billing Admin_
 * You have a MongoDB database running and accessible with permissions for this utility to write the retrieved organisation config to a database collection and then query the data back out (this database doesn't have to be running on Atlas)
 * Python 3.7 of greater is installed
