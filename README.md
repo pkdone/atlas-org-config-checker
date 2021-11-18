@@ -12,7 +12,7 @@ The [Admin API](https://docs.atlas.mongodb.com/reference/api-resources/) for Mon
 * Using the aggregation framework, analyse the latest _organisation_ config document, stored in the database, for non-compliances, according to a set of hard-coded example rules 
 
 
-## Example Hard-Coded Non-Compliance Rule Checks Implemented
+## Example Implemented Non-Compliance Rule Checks
 
 * Check for banned clusters (typically shared rather than dedicated clusters)
 * Check for project access lists that are too open (e.g. allowing 0.0.0.0/0)
