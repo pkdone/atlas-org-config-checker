@@ -4,13 +4,15 @@ Demo utility showing how a [MongoDB Atlas](https://www.mongodb.com/atlas) _organ
 
 The [Admin API](https://docs.atlas.mongodb.com/reference/api-resources/) for MongoDB Atlas does not provide one single resource to call to obtain all the configuration metadata for all the resources contained in an Atlas organisation. Therefore, this utility makes multiple API calls to get configuration data for every resource in the organisation and then combines these into one single representation of the organisation's current configuration. An example of the utility's checks, run against this configuration, is the detection of any 'banned' M0/M2/M5 shared clusters currently deployed in the Atlas organisation.
 
-## Main Process Flow Executed By The Utility:
+
+## Main Process Flow Executed
 
 * Using the Atlas Admin API, assemble a single JSON representation of the full organisation's configuration by polling the Admin API for data from various resources belonging to the organisation (e.g. _org_, _group_ (_project_), _cluster_, _accessList_, etc.).
 * Save the retrieved config data as a single document in a MongoDB database collection with an additional timestamp field capturing when the configuration was retrieved.
 * Using the aggregation framework, analyse the latest _organisation_ config document, stored in the database, for non-compliances, according to a set of hard-coded example rules 
 
-## Example Hard-Coded Non-Compliance Rule Checks Performed By The Utility
+
+## Example Hard-Coded Non-Compliance Rule Checks Implemented
 
 * Check for banned clusters (typically shared rather than dedicated clusters)
 * Check for project access lists that are too open (e.g. allowing 0.0.0.0/0)
@@ -21,23 +23,25 @@ The [Admin API](https://docs.atlas.mongodb.com/reference/api-resources/) for Mon
 * TODO: auditing not enabled
 * TODO: enc-at-rest with BYOK not enabled
 
-## Examples Of Non-Compliance Warnings Logged By This Utility
+
+## Examples Of Non-Compliance Warnings Logged
 
 ```
-ClusterNonCompliance(orgId='abc123', orgName='SA-NEUR', projectId='xyz111', projectName='Paul Demo Project', clusterId='123456', clusterName='RealmCluster', description='Using banned cluster type', badValue='M2'),
+ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz111', projectName='Paul Demo Project', clusterId='123456', clusterName='RealmCluster', description='Using banned cluster type', badValue='M2')
 
-AccessListNonCompliance(orgId='abc123', orgName='SA-NEUR', projectId='xyz222', projectName='Alan Proj Reaper', cidrBlock='0.0.0.0/0', comment='', description='Using subnet mask which is too open', badValue=0),
+AccessListNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz222', projectName='Alan Proj Reaper', cidrBlock='0.0.0.0/0', comment='', description='Using subnet mask which is too open', badValue=0)
 
-ClusterNonCompliance(orgId='abc123', orgName='SA-NEUR', projectId='xyz333', projectName='eComm', clusterId='23456', clusterName='DemoCluster', description='Using banned cloud provder', badValue='GCP'),
+ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz333', projectName='eComm', clusterId='23456', clusterName='DemoCluster', description='Using banned cloud provder', badValue='GCP')
 
-ClusterNonCompliance(orgId='abc123', orgName='SA-NEUR', projectId='xyz444', projectName='Backend', clusterId='34567', clusterName='TestCluster', description='Using banned minimum TLS version', badValue='TLS1_1'),
+ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz444', projectName='Backend', clusterId='34567', clusterName='TestCluster', description='Using banned minimum TLS version', badValue='TLS1_1')
 
-ClusterNonCompliance(orgId='abc123', orgName='SA-NEUR', projectId='xyz555', projectName='Main Data Warehouse', clusterId='45678', clusterName='dev-sandbox', description='Using banned region for a cloud provder', badValue='AZURE: EUROPE_NORTH'),   
+ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz555', projectName='Main Data Warehouse', clusterId='45678', clusterName='dev-sandbox', description='Using banned region for a cloud provder', badValue='AZURE: EUROPE_NORTH')
 
-ClusterNonCompliance(orgId='abc123', orgName='SA-NEUR', projectId='xyz666', projectName='Aministrator Reports', clusterId='56789', clusterName='Integration-Test-Cluster', description='Cluster does not have backup enabled', badValue='disabled'),
+ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz666', projectName='Aministrator Reports', clusterId='56789', clusterName='Integration-Test-Cluster', description='Cluster does not have backup enabled', badValue='disabled')
 ```
 
-## Prerequisites For Running This Utility
+
+## Prerequisites For Running
 
 * You have access to a generated _Organization API Key_ for the organisation you need the utility to inspect
 * This API key has an access list defined which allows access from the IP address of the machine that will run this utility
@@ -47,13 +51,15 @@ ClusterNonCompliance(orgId='abc123', orgName='SA-NEUR', projectId='xyz666', proj
 * MongoDB's Python Driver (_PyMongo) is installed, e.g.: `pip3 install --user pymongo`
 * The Python utility is made executable on the host machine, e.g.: `chmod u+x atlas-org-config-checker.py`
 
+
 ## How To Run
 
-### To View Full Help Parameters For The Utility
+### To View Full Help Options For The Utility
 
 ```
 ./atlas-org-config-checker.py -h
 ```
+
 
 ### To Execute Atlas Org Checks With Results Persisted To A Database
 
