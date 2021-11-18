@@ -47,7 +47,7 @@ ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz666', pro
 * The API key has an access list defined which allows access from the IP address of the machine that will run this utility
 * The API key has the following permissions associated with it: _Organization Read Only_, _Organization Member_, _Organization Billing Admin_
 * You have a MongoDB database running and accessible with permissions for this utility to write the retrieved organisation config to a database collection and then query the data back out (this database doesn't have to be running on Atlas)
-* Python 3.7 of greater is installed
+* Python version 3.7 or greater is installed
 * MongoDB's Python Driver (_PyMongo) is installed, e.g.: `pip3 install --user pymongo`
 * The Python utility is made executable on the host machine, e.g.: `chmod u+x atlas-org-config-checker.py`
 
