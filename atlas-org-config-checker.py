@@ -23,7 +23,7 @@ from collections import namedtuple
 from requests.auth import HTTPDigestAuth
 from datetime import datetime
 from pprint import pprint
-from pymongo import MongoClient, DESCENDING
+from pymongo import MongoClient, ASCENDING, DESCENDING
 
 
 # Named tuple to capture information about a non-compliance
@@ -57,6 +57,14 @@ def main():
     argparser.add_argument("-c", "--coll", default=DEFAULT_COLLNAME,
                            help=f"Collection name (default: {DEFAULT_COLLNAME})")
     args = argparser.parse_args()
+
+    if DO_DB_DATA_COLLECT and ((not args.atlasApiPubKey) or (not args.atlasApiPrvKey)):
+        sys.exit(f"\nERROR: You must specify parameters for 'atlasApiPubKey' and 'atlasApiPrvKey'"
+                 f"\n")
+
+    if not args.atlasOrgId:
+        sys.exit(f"\nERROR: You must specify the parameter 'atlasOrgId'\n")
+
     start = datetime.now()
     run(args.atlasApiPubKey, args.atlasApiPrvKey, args.atlasOrgId, args.url, args.db, args.coll)
     end = datetime.now()
@@ -74,7 +82,7 @@ def run(publicKey, privateKey, orgId, url, dbname, collname):
         fullConfig = getFullConfigFromAtlasAdminAPI(publicKey, privateKey, orgId)
         insertFullConfigIntoDB(coll, fullConfig)
 
-    searchForClusterNonCompliances(coll)
+    searchForClusterNonCompliances(coll, orgId)
 
 
 ##
@@ -85,8 +93,8 @@ def getFullConfigFromAtlasAdminAPI(publicKey, privateKey, orgId):
 
     fullConfig = {
         TIMESTAMP_JSON_KEY: datetime.utcnow(),
-        "publicAPIKeyUsed": publicKey,
-        "orgId": orgId,
+        ORG_ID_JSON_KEY: orgId,
+        PUB_API_USED_JSON_KEY: publicKey,
     }
 
     startOrgResource = f"{BASE_ATLAS_ADMIN_URL}/orgs/{orgId}"
@@ -178,6 +186,7 @@ def addRelatedChildConfigResources(publicKey, privateKey, parentType, parentConf
 
                 # Get sub-resource via separate API call
                 targetURL = f"{BASE_ATLAS_ADMIN_URL}/{parentType}/{projectId}/{resource}"
+                print(targetURL)
                 childConfigs = getConfigResource(publicKey, privateKey, targetURL, level)
 
                 # Unpick each sub-resource and attach it to the parent
@@ -204,7 +213,7 @@ def getDBCollumnHandle(url, dbname, collname):
     print(f"\nConnecting to MongoDB using URL '{url}' to locate collection '{dbname}.{collname}'")
     connection = MongoClient(url)
     coll = connection[dbname][collname]
-    coll.create_index([(TIMESTAMP_JSON_KEY, DESCENDING)])  # Ensure index exists
+    coll.create_index([(ORG_ID_JSON_KEY, ASCENDING), (TIMESTAMP_JSON_KEY, DESCENDING)])
     return coll
 
 
@@ -220,11 +229,11 @@ def insertFullConfigIntoDB(coll, fullConfig):
 ##
 # Analyse latest record Atlas org config stored in DB for violations of various rules.
 ##
-def searchForClusterNonCompliances(coll):
+def searchForClusterNonCompliances(coll, orgId):
     nonCompliancesList = []
 
     for checkFunction in CHECK_FUNCTION_LIST:
-        nonCompliancesList = mergeLists(nonCompliancesList, checkFunction(coll))
+        nonCompliancesList = mergeLists(nonCompliancesList, checkFunction(coll, orgId))
 
     reportClusterNonCompliances(nonCompliancesList)
 
@@ -250,8 +259,12 @@ def reportClusterNonCompliances(nonCompliancesList):
 ##
 # NON-COMPLIANCE CHECK: Check for use of banned shared clusters.
 ##
-def checkForBannedSharedClusters(coll):
+def checkForBannedSharedClusters(coll, orgId):
     pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
         {"$sort": {
             "timestamp": -1,
         }},
@@ -305,10 +318,14 @@ def checkForBannedSharedClusters(coll):
 # NON-COMPLIANCE CHECK: Check for use of access lists for projects that are too open to to many IP
 # addresses.
 ##
-def checkForTooOpenProjectAccessLists(coll):
+def checkForTooOpenProjectAccessLists(coll, orgId):
     subnetThreshold = 16
 
     pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
         {"$sort": {
             "timestamp": -1,
         }},
@@ -371,8 +388,12 @@ def checkForTooOpenProjectAccessLists(coll):
 ##
 # NON-COMPLIANCE CHECK: Check for use of banned cloud providers.
 ##
-def checkForBannedCloudProviders(coll):
+def checkForBannedCloudProviders(coll, orgId):
     pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
         {"$sort": {
             "timestamp": -1,
         }},
@@ -439,8 +460,12 @@ def checkForBannedCloudProviders(coll):
 ##
 # NON-COMPLIANCE CHECK: Check for use of risky TLS version (1.0 and 1.1).
 ##
-def checkForRiskyTLSVersions(coll):
+def checkForRiskyTLSVersions(coll, orgId):
     pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
         {"$sort": {
             "timestamp": -1,
         }},
@@ -497,8 +522,12 @@ def checkForRiskyTLSVersions(coll):
 # NON-COMPLIANCE CHECK: Check for deployments in specific regions of specific cloud providers which
 # are banned.
 ##
-def checkForBannedRegionsInCloudProviders(coll):
+def checkForBannedRegionsInCloudProviders(coll, orgId):
     pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
         {"$sort": {
             "timestamp": -1,
         }},
@@ -575,8 +604,12 @@ def checkForBannedRegionsInCloudProviders(coll):
 ##
 # NON-COMPLIANCE CHECK: Check for databases clusters which don't have backup enabled.
 ##
-def checkForNonBackedUpClusters(coll):
+def checkForNonBackedUpClusters(coll, orgId):
     pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
         {"$sort": {
             "timestamp": -1,
         }},
@@ -627,7 +660,7 @@ def checkForNonBackedUpClusters(coll):
 
 
 # Constants
-DO_DB_DATA_COLLECT = False
+DO_DB_DATA_COLLECT = True
 DEFAULT_MONGODB_URL = "mongodb://localhost:27017"
 DEFAULT_DBNAME = "atlas_org_configuration"
 DEFAULT_COLLNAME = "config"
@@ -645,11 +678,12 @@ PROJECT_RESOURCES_NAME = "projects"
 CLUSTERS_RESOURCES_NAME = "clusters"
 PROCESS_ARGS_JSON_FIELD = "processArgs"
 TIMESTAMP_JSON_KEY = "timestamp"
+ORG_ID_JSON_KEY = "orgId"
+PUB_API_USED_JSON_KEY = "publicAPIKeyUsed"
 GROUP_SUB_RESOURCES = [
                        "accessList", "clusters", "maintenanceWindow", "databaseUsers",
-                       "alertConfigs", "auditLog", "encryptionAtRest", "globalWrites",
-                       "integrations",
-                      ]
+                       "alertConfigs",
+                      ]  # TODO:  integrations, "auditLog", "encryptionAtRest", "integrations",
 CHECK_FUNCTION_LIST = [
                         checkForBannedSharedClusters, checkForTooOpenProjectAccessLists,
                         checkForBannedCloudProviders, checkForRiskyTLSVersions,
