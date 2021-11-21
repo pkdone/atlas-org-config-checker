@@ -54,7 +54,7 @@ ProjectNonCompliance(orgId='abc123', orgName='ACME-Inc', projectId='xyz888', pro
 * The API key has the following permissions associated with it: _Organization Read Only_, _Organization Member_, _Organization Billing Admin_
 * You have a MongoDB database running and accessible with permissions for this utility to write the retrieved organisation config to a database collection and then query the data back out (this database doesn't have to be running on Atlas)
 * Python version 3.7 or greater is installed
-* MongoDB's Python Driver (_PyMongo) is installed, e.g.: `pip3 install --user pymongo`
+* MongoDB's Python Driver (_PyMongo_) is installed, e.g.: `pip3 install --user pymongo`
 * The Python utility is made executable on the host machine, e.g.: `chmod u+x atlas-org-config-checker.py`
 
 
@@ -69,7 +69,7 @@ ProjectNonCompliance(orgId='abc123', orgName='ACME-Inc', projectId='xyz888', pro
 
 ### To Execute Atlas Org Checks With Results Persisted To A Database
 
-Note: Replace the values for the `-k`, `-p`, `-o` and `-u` parameters with your API public key, your API private key, the ID of your Atlas organisation to inspect, and the URL of the MongoDB database to write the results to, respectively.
+_Note_: Replace the values for the `-k`, `-p`, `-o` and `-u` parameters with your API public key, your API private key, the ID of your Atlas organisation to inspect, and the URL of the MongoDB database to write the results to, respectively.
 
 ```
 ./atlas-org-config-checker.py -k "dttwone" -p "8e721-ed32-38d-380-33847" -o "bb73cf83ab233329" -u "mongodb+srv://usr:pwd@myclstr.a12z.mongodb.net/"
@@ -77,6 +77,6 @@ Note: Replace the values for the `-k`, `-p`, `-o` and `-u` parameters with your 
 
 ## Outstanding Issues
 
-* The utility only retrieves the first 500 resources of a specific type (e.g. _AccessList_) for the organisation as it currently doesn't detect an Atlas API response which includes a _next_ link for retrieving the subsequent page of 500 results (if any). This would mean for large Atlas organisations some configuration data may be missed off.
-* For the Auditing configuration data retrieval, the Atlas Admin API currently requires a Project level API key to be used to access Auditing config data - the Organisation level API key does not have such access privileges. Therefore, this script disables attempting to retrieve Auditing information from the API and as a result Auditing configuration data is not currently persisted and the checks conducted by the script for Auditing non-compliances will return no identified Auditing violations even if such violations are present in the Atlas organisation.
+* The utility only retrieves the __first 500 resources__ of a specific type (e.g. _AccessList_) for the organisation as it currently doesn't detect an Atlas API response which includes a _next_ link for retrieving the subsequent page of 500 results (if any). This would mean for large Atlas organisations some configuration data may be missed off.
+* For the __Auditing__ configuration data retrieval, the Atlas Admin API currently requires a Project level API key to be used to access Auditing config data - the Organisation level API key does not have such access privileges. Therefore, this script disables attempting to retrieve Auditing information from the API and as a result Auditing configuration data is not currently persisted and the checks conducted by the script for Auditing non-compliances will return no identified Auditing violations even if such violations are present in the Atlas organisation.
 
