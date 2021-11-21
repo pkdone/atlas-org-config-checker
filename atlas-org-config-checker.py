@@ -209,9 +209,6 @@ def addRelatedChildConfigResources(publicKey, privateKey, parentType, parentConf
                                                                       advClsTargetURL, level)
                             childConfig[PROCESS_ARGS_JSON_FIELD] = advancedClusterConfig
 
-                        if resource in ["auditLog", "encryptionAtRest", "integrations"]:
-                            print(f"adding: {resource}")
-
                         project[resource].append(childConfig)
                 # Otherwise just attach whole response to parent
                 else:
