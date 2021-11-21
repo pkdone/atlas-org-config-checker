@@ -808,7 +808,7 @@ PROCESS_ARGS_JSON_FIELD = "processArgs"
 TIMESTAMP_JSON_KEY = "timestamp"
 ORG_ID_JSON_KEY = "orgId"
 PUB_API_USED_JSON_KEY = "publicAPIKeyUsed"
-# Resource not added yet because access not supported by organisation level API key:
+# Resources not added yet because access not supported by organisation level API key:
 #  "auditLog", "encryptionAtRest", "integrations",
 GROUP_SUB_RESOURCES = [
                        "accessList", "clusters", "maintenanceWindow", "databaseUsers",
