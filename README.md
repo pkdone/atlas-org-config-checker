@@ -4,6 +4,8 @@ Demo utility showing how a [MongoDB Atlas](https://www.mongodb.com/atlas) _organ
 
 The [Admin API](https://docs.atlas.mongodb.com/reference/api-resources/) for MongoDB Atlas does not provide one single resource to call to obtain all the configuration metadata for all the resources contained in an Atlas organisation. Therefore, this utility makes multiple API calls to get configuration data for every resource in the organisation and then combines these into one single representation of the organisation's current configuration. An example of the utility's checks, run against this configuration, is the detection of any 'banned' M0/M2/M5 shared clusters currently deployed in the Atlas organisation.
 
+This utility just reports the non-compliances it identifies. However, a more sophisticated version of these script could be programmed to then use the Atlas Admin API to automate corrective action, such as changing the configuration of a cluster to rectify the violation, or where direction re-configuration is not possible, pause or disabled the cluster to reduce the risk of the existing non-compliance.
+
 
 ## Main Process Flow Executed
 
@@ -20,24 +22,28 @@ The [Admin API](https://docs.atlas.mongodb.com/reference/api-resources/) for Mon
 * Check for banned regions in cloud providers deployed too (e.g. AWS in EU-WEST-2)
 * Check for risky TLS versions configured (i.e. if TLS version 1.0 or 1.2 used rather than the safer default of 1.2)
 * Check for databases deployments configured without backup enabled
-* TODO: auditing not enabled
-* TODO: enc-at-rest with BYOK not enabled
+* Check for encryption at rest with "bring your own key" (BYOK) not enabled
+* Check for projects which have auditing disabled
 
 
 ## Examples Of Non-Compliance Warnings Logged
 
 ```
-ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz111', projectName='Paul Demo Project', clusterId='123456', clusterName='RealmCluster', description='Using banned cluster type', badValue='M2')
+ClusterNonCompliance (orgId='abc123', orgName='ACME-Inc', projectId='xyz111', projectName='Paul Demo Project', clusterId='123456', clusterName='RealmCluster', description='Using banned cluster type', badValue='M2')
 
-AccessListNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz222', projectName='Alan Proj Reaper', cidrBlock='0.0.0.0/0', comment='', description='Using subnet mask which is too open', badValue=0)
+AccessListNonCompliance (orgId='abc123', orgName='ACME-Inc', projectId='xyz222', projectName='Alan Proj Reaper', cidrBlock='0.0.0.0/0', comment='', description='Using subnet mask which is too open', badValue=0)
 
-ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz333', projectName='eComm', clusterId='23456', clusterName='DemoCluster', description='Using banned cloud provder', badValue='GCP')
+ClusterNonCompliance (orgId='abc123', orgName='ACME-Inc', projectId='xyz333', projectName='eComm', clusterId='23456', clusterName='DemoCluster', description='Using banned cloud provder', badValue='GCP')
 
-ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz444', projectName='Backend', clusterId='34567', clusterName='TestCluster', description='Using banned minimum TLS version', badValue='TLS1_1')
+ClusterNonCompliance (orgId='abc123', orgName='ACME-Inc', projectId='xyz444', projectName='Backend', clusterId='34567', clusterName='TestCluster', description='Using banned minimum TLS version', badValue='TLS1_1')
 
-ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz555', projectName='Main Data Warehouse', clusterId='45678', clusterName='dev-sandbox', description='Using banned region for a cloud provder', badValue='AZURE: EUROPE_NORTH')
+ClusterNonCompliance (orgId='abc123', orgName='ACME-Inc', projectId='xyz555', projectName='Main Data Warehouse', clusterId='45678', clusterName='dev-sandbox', description='Using banned region for a cloud provder', badValue='AZURE: EUROPE_NORTH')
 
-ClusterNonCompliance (orgId='abc123', orgName='SA-NEUR', projectId='xyz666', projectName='Aministrator Reports', clusterId='56789', clusterName='Integration-Test-Cluster', description='Cluster does not have backup enabled', badValue='disabled')
+ClusterNonCompliance (orgId='abc123', orgName='ACME-Inc', projectId='xyz666', projectName='Aministrator Reports', clusterId='56789', clusterName='Integration-Test-Cluster', description='Cluster does not have backup enabled', badValue='disabled')
+
+ClusterNonCompliance(orgId='abc123', orgName='ACME-Inc', projectId='xyz777', projectName='My Tactical Stuff', clusterId='67890', clusterName='Small DBs', description="Cluster does not have encryption at rest with 'bring your own key' (BYOK) enabled", badValue='NONE')
+
+ProjectNonCompliance(orgId='abc123', orgName='ACME-Inc', projectId='xyz888', projectName='Data Science Proj', description='Auditing disabled for the project', badValue='disabled')
 ```
 
 
@@ -72,4 +78,5 @@ Note: Replace the values for the `-k`, `-p`, `-o` and `-u` parameters with your 
 ## Outstanding Issues
 
 * The utility only retrieves the first 500 resources of a specific type (e.g. _AccessList_) for the organisation as it currently doesn't detect an Atlas API response which includes a _next_ link for retrieving the subsequent page of 500 results (if any). This would mean for large Atlas organisations some configuration data may be missed off.
+* For the Auditing configuration data retrieval, the Atlas Admin API currently requires a Project level API key to be used to access Auditing config data - the Organisation level API key does not have such access privileges. Therefore, this script disables attempting to retrieve Auditing information from the API and as a result Auditing configuration data is not currently persisted and the checks conducted by the script for Auditing non-compliances will return no identified Auditing violations even if such violations are present in the Atlas organisation.
 

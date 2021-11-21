@@ -35,6 +35,10 @@ AccessListNonCompliance = namedtuple("AccessListNonCompliance", [
                                         "orgId", "orgName", "projectId", "projectName",
                                         "cidrBlock", "comment", "description", "badValue"
                                     ])
+ProjectNonCompliance = namedtuple("ProjectNonCompliance", [
+                                    "orgId", "orgName", "projectId", "projectName", "description",
+                                    "badValue"
+                                 ])
 
 
 ##
@@ -117,7 +121,8 @@ def getConfigResource(publicKey, privateKey, startLink, level):
 
     if response.status_code != 200:
         sys.exit(f"\nERROR: Call to '{startLink}' returned a non-OK status code: '"
-                 f"{response.status_code}: {response.reason}'\n")
+                 f"{response.status_code}: {response.reason}. Resource: {startLink}. Detail: \n"
+                 f"  {response.json()}'\n")
 
     responseJson = response.json()
     print(".", end="", flush=True)
@@ -154,7 +159,7 @@ def getConfigResource(publicKey, privateKey, startLink, level):
                 if resourceTypeKey not in responseJson:
                     responseJson[resourceTypeKey] = []
 
-                # Take each hild element and attach it to the parent JSON
+                # Take each child element and attach it to the parent JSON
                 for childConfig in childConfigs[RESULTS_JSON_KEY]:
                     if LINKS_JSON_KEY in childConfig:
                         del childConfig[LINKS_JSON_KEY]
@@ -181,17 +186,18 @@ def addRelatedChildConfigResources(publicKey, privateKey, parentType, parentConf
 
             # Loop thru well know sub-resource types to grab
             for resource in GROUP_SUB_RESOURCES:
+                childResponse = None
+
                 if resource not in project:
                     project[resource] = []
 
                 # Get sub-resource via separate API call
                 targetURL = f"{BASE_ATLAS_ADMIN_URL}/{parentType}/{projectId}/{resource}"
-                print(targetURL)
-                childConfigs = getConfigResource(publicKey, privateKey, targetURL, level)
+                childResponse = getConfigResource(publicKey, privateKey, targetURL, level)
 
                 # Unpick each sub-resource and attach it to the parent
-                if RESULTS_JSON_KEY in childConfigs:
-                    for childConfig in childConfigs[RESULTS_JSON_KEY]:
+                if RESULTS_JSON_KEY in childResponse:
+                    for childConfig in childResponse[RESULTS_JSON_KEY]:
                         if LINKS_JSON_KEY in childConfig:
                             del childConfig[LINKS_JSON_KEY]
 
@@ -203,7 +209,13 @@ def addRelatedChildConfigResources(publicKey, privateKey, parentType, parentConf
                                                                       advClsTargetURL, level)
                             childConfig[PROCESS_ARGS_JSON_FIELD] = advancedClusterConfig
 
+                        if resource in ["auditLog", "encryptionAtRest", "integrations"]:
+                            print(f"adding: {resource}")
+
                         project[resource].append(childConfig)
+                # Otherwise just attach whole response to parent
+                else:
+                    project[resource].append(childResponse)
 
 
 ##
@@ -625,7 +637,8 @@ def checkForNonBackedUpClusters(coll, orgId):
         }},
 
         {"$match": {
-             "org.projects.clusters.providerBackupEnabled": False,
+            "org.projects.clusters.providerBackupEnabled": False,
+            "org.projects.clusters.providerSettings.instanceSizeName": {"$ne": "M0"},
         }},
 
         {"$project": {
@@ -659,6 +672,121 @@ def checkForNonBackedUpClusters(coll, orgId):
     return nonCompliancesList
 
 
+##
+# NON-COMPLIANCE CHECK: Check for encryption at rest with "bring your own key" (BYOK) not enabled
+# for clusters.
+##
+def checkForBYOKEncryptionDisabled(coll, orgId):
+    pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
+        {"$sort": {
+            "timestamp": -1,
+        }},
+
+        {"$limit": 1},
+
+        {"$unwind": {
+            "path": "$org.projects",
+        }},
+
+        {"$unwind": {
+            "path": "$org.projects.clusters",
+        }},
+
+        {"$match": {
+            "org.projects.clusters.encryptionAtRestProvider": "NONE",
+            "org.projects.clusters.providerSettings.instanceSizeName": {
+                "$nin": ["M0", "M2", "M5"]
+            },
+        }},
+
+        {"$project": {
+            "_id": 0,
+            "orgId": "$org.id",
+            "orgName": "$org.name",
+            "projectId": "$org.projects.id",
+            "projectName": "$org.projects.name",
+            "clusterId": "$org.projects.clusters.id",
+            "clusterName": "$org.projects.clusters.name",
+            "encryptionAtRestProvider": "$org.projects.clusters.encryptionAtRestProvider",
+        }},
+
+        {"$sort": {
+            "orgName": 1,
+            "projectName": 1,
+            "clusterName": 1,
+            "encryptionAtRestProvider": 1,
+        }},
+    ]
+
+    nonCompliancesList = []
+
+    for rec in coll.aggregate(pipeline):
+        nonCompliancesList.append(ClusterNonCompliance(rec["orgId"], rec["orgName"],
+                                                       rec["projectId"], rec["projectName"],
+                                                       rec["clusterId"], rec["clusterName"],
+                                                       "Cluster does not have encryption at rest "
+                                                       "with 'bring your own key' (BYOK) enabled",
+                                                       rec["encryptionAtRestProvider"]))
+
+    return nonCompliancesList
+
+
+##
+# NON-COMPLIANCE CHECK: Check for projects which have auditing disabled.
+##
+def checkForAuditLoggingDisabled(coll, orgId):
+    pipeline = [
+        {"$match": {
+            "orgId": orgId,
+        }},
+
+        {"$sort": {
+            "timestamp": -1,
+        }},
+
+        {"$limit": 1},
+
+        {"$unwind": {
+            "path": "$org.projects",
+        }},
+
+        {"$unwind": {
+            "path": "$org.projects.auditLog",
+        }},
+
+        {"$match": {
+            "org.projects.auditLog.enabled": False,
+        }},
+
+        {"$project": {
+            "_id": 0,
+            "orgId": "$org.id",
+            "orgName": "$org.name",
+            "projectId": "$org.projects.id",
+            "projectName": "$org.projects.name",
+            "auditLogEnabled": "$org.projects.auditLog.enabled",
+        }},
+
+        {"$sort": {
+            "orgName": 1,
+            "projectName": 1,
+        }},
+    ]
+
+    nonCompliancesList = []
+
+    for rec in coll.aggregate(pipeline):
+        nonCompliancesList.append(ProjectNonCompliance(rec["orgId"], rec["orgName"],
+                                  rec["projectId"], rec["projectName"],
+                                  "Auditing disabled for the project", "disabled"))
+
+    return nonCompliancesList
+
+
 # Constants
 DO_DB_DATA_COLLECT = True
 DEFAULT_MONGODB_URL = "mongodb://localhost:27017"
@@ -680,14 +808,17 @@ PROCESS_ARGS_JSON_FIELD = "processArgs"
 TIMESTAMP_JSON_KEY = "timestamp"
 ORG_ID_JSON_KEY = "orgId"
 PUB_API_USED_JSON_KEY = "publicAPIKeyUsed"
+# Resource not added yet because access not supported by organisation level API key:
+#  "auditLog", "encryptionAtRest", "integrations",
 GROUP_SUB_RESOURCES = [
                        "accessList", "clusters", "maintenanceWindow", "databaseUsers",
                        "alertConfigs",
-                      ]  # TODO:  integrations, "auditLog", "encryptionAtRest", "integrations",
+                      ]
 CHECK_FUNCTION_LIST = [
                         checkForBannedSharedClusters, checkForTooOpenProjectAccessLists,
                         checkForBannedCloudProviders, checkForRiskyTLSVersions,
                         checkForBannedRegionsInCloudProviders, checkForNonBackedUpClusters,
+                        checkForBYOKEncryptionDisabled, checkForAuditLoggingDisabled,
                       ]
 
 

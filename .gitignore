@@ -1,3 +1,6 @@
+# Ignore notes
+NOTES.txt
+
 # Ignore mongodump dumps
 dump/
 
