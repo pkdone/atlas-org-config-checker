@@ -51,7 +51,7 @@ ProjectNonCompliance(orgId='abc123', orgName='ACME-Inc', projectId='xyz888', pro
 
 * You have access to a generated _Organization API Key_ for the organisation you need the utility to inspect
 * The API key has an access list defined which allows access from the IP address of the machine that will run this utility
-* The API key has the following permissions associated with it: _Organization Read Only_, _Organization Member_, _Organization Billing Admin_
+* The API key has the following permissions associated with it: _Organization Read Only_, _Organization Member_
 * You have a MongoDB database running and accessible with permissions for this utility to write the retrieved organisation config to a database collection and then query the data back out (this database doesn't have to be running on Atlas)
 * Python version 3.7 or greater is installed
 * MongoDB's Python Driver (_PyMongo_) is installed, e.g.: `pip3 install --user pymongo`
