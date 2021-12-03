@@ -26,7 +26,7 @@ from pprint import pprint
 from pymongo import MongoClient, ASCENDING, DESCENDING
 
 
-# Named tuple to capture information about a non-compliance
+# Named tuples to capture information about a non-compliance
 ClusterNonCompliance = namedtuple("ClusterNonCompliance", [
                                     "orgId", "orgName", "projectId", "projectName", "clusterId",
                                     "clusterName", "description", "badValue"
@@ -324,7 +324,7 @@ def checkForBannedSharedClusters(coll, orgId):
 
 
 ##
-# NON-COMPLIANCE CHECK: Check for use of access lists for projects that are too open to to many IP
+# NON-COMPLIANCE CHECK: Check for use of access lists for projects that are too open to too many IP
 # addresses.
 ##
 def checkForTooOpenProjectAccessLists(coll, orgId):
