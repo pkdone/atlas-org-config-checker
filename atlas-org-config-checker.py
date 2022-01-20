@@ -60,9 +60,16 @@ def main():
                            help=f"Database name (default: {DEFAULT_DBNAME})")
     argparser.add_argument("-c", "--coll", default=DEFAULT_COLLNAME,
                            help=f"Collection name (default: {DEFAULT_COLLNAME})")
+    argparser.add_argument("-s", "--sync", dest="syncLatestConfig", action="store_true",
+                           help=f"Synchronise (collect) the latest Atlas organisation "
+                                f"configuration data (default behaviour)")
+    argparser.add_argument("-n", "--nosync", dest="syncLatestConfig", action="store_false",
+                           help=f"Do not synchronise (collect) the latest Atlas organisation "
+                                f"configuration data")
+    argparser.set_defaults(syncLatestConfig=True)    
     args = argparser.parse_args()
-
-    if DO_DB_DATA_COLLECT and ((not args.atlasApiPubKey) or (not args.atlasApiPrvKey)):
+    
+    if args.syncLatestConfig and ((not args.atlasApiPubKey) or (not args.atlasApiPrvKey)):
         sys.exit(f"\nERROR: You must specify parameters for 'atlasApiPubKey' and 'atlasApiPrvKey'"
                  f"\n")
 
@@ -70,7 +77,8 @@ def main():
         sys.exit(f"\nERROR: You must specify the parameter 'atlasOrgId'\n")
 
     start = datetime.now()
-    run(args.atlasApiPubKey, args.atlasApiPrvKey, args.atlasOrgId, args.url, args.db, args.coll)
+    run(args.atlasApiPubKey, args.atlasApiPrvKey, args.atlasOrgId, args.url, args.db, args.coll,
+        args.syncLatestConfig)
     end = datetime.now()
     print(f"\nFinished processing in {int((end-start).total_seconds())} seconds")
     print()
@@ -79,10 +87,10 @@ def main():
 ##
 # Retrieve Atlas org config, save to DB and report non-compliances.
 ##
-def run(publicKey, privateKey, orgId, url, dbname, collname):
+def run(publicKey, privateKey, orgId, url, dbname, collname, syncLatestConfig):
     coll = getDBCollumnHandle(url, dbname, collname)
 
-    if DO_DB_DATA_COLLECT:
+    if syncLatestConfig:
         fullConfig = getFullConfigFromAtlasAdminAPI(publicKey, privateKey, orgId)
         insertFullConfigIntoDB(coll, fullConfig)
 
@@ -785,7 +793,6 @@ def checkForAuditLoggingDisabled(coll, orgId):
 
 
 # Constants
-DO_DB_DATA_COLLECT = True
 DEFAULT_MONGODB_URL = "mongodb://localhost:27017"
 DEFAULT_DBNAME = "atlas_org_configuration"
 DEFAULT_COLLNAME = "config"
